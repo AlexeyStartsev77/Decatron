@@ -19,9 +19,9 @@
   int dec_pos;
   boolean effectInit=false;
   boolean smileSide=false;
-  int smileDinSise = 2;
-  boolean smileDinDir=true;
-  int smileDinTimer = 1000;
+  int smileDynSise = 2;
+  boolean smileDynDir=true;
+  int smileDynTimer = 1000;
   unsigned long stroreMillis = millis();
   boolean smileSideMetro = false;
   int smileMetroTimer = 1000;
@@ -38,8 +38,7 @@
   int currentDimm = 0;
   int dimmValues[dimmSets] = {110,130,180};
   int currentDuty = dimmValues[currentDimm];
-
-
+  int genWarm = 1000;
 
 void setup() {
   // настройка пинов на выход
@@ -55,7 +54,7 @@ void setup() {
   setPWMprescaler(GEN, 1); // множитель х1
   setPWMmode(GEN, 1); // режима Phase-correct PWM
   setPWM(GEN, currentDuty);
-  delay(1000);
+  delay(genWarm);
   decathroneInit();
 }
 
@@ -66,7 +65,7 @@ void loop() {
     case 1:{setDecatronPos(true);break;}
     case 2:{setDecatronPos(false);break;}
     case 3:{smile(2);break;}
-    case 4:{smileDin();break;}
+    case 4:{smileDyn();break;}
     case 5:{metro(6,4);break;}
   }
   delayMicroseconds(currentDelay_mks);
@@ -90,8 +89,8 @@ void metro(int size, int delta) {
     delayMicroseconds(currentDelay_mks);
   }
 
-  if (millis()-stroreMillis >= smileDinTimer){
-    if (smileSideMetro and smileSide){
+  if (millis()-stroreMillis >= smileDynTimer){
+    if (smileSideMetro == smileSide){
       delta = delta;
     }
     else {
@@ -107,11 +106,11 @@ void metro(int size, int delta) {
   smileSide=!smileSide;
 }
 
-void smileDin() {
+void smileDyn() {
   //идем по часовой стрелке до центрального нижнего и еще на целую половину size
 
   if (!effectInit){
-    for (int pos=0; pos <=14+smileDinSise/2; pos++){
+    for (int pos=0; pos <=14+smileDynSise/2; pos++){
       setDecatronPos(true); 
       delayMicroseconds(currentDelay_mks); 
     }
@@ -120,20 +119,20 @@ void smileDin() {
     stroreMillis = millis();
   }
   //качнем
-    for (int pos=1; pos<=smileDinSise-1; pos++){
+    for (int pos=1; pos<=smileDynSise-1; pos++){
       setDecatronPos(smileSide); 
       delayMicroseconds(currentDelay_mks);
   }
   
   if (millis()-stroreMillis >= smileMetroTimer){
-    if (smileDinSise>=30){smileDinDir=false;}
-    else if (smileDinSise<=2){smileDinDir=true;}
-    if (smileDinDir) {
-      smileDinSise=smileDinSise+2;
+    if (smileDynSise>=30){smileDynDir=false;}
+    else if (smileDynSise<=2){smileDynDir=true;}
+    if (smileDynDir) {
+      smileDynSise=smileDynSise+2;
       setDecatronPos(smileSide); 
     }
     else {
-      smileDinSise=smileDinSise-2;
+      smileDynSise=smileDynSise-2;
       setDecatronPos(!smileSide);
       }
     stroreMillis = millis();
