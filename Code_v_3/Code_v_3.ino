@@ -14,7 +14,7 @@
   GButton btnEffect(BTN2, HIGH_PULL, NORM_OPEN);
   GButton btnDimm(BTN3, HIGH_PULL, NORM_OPEN);
 
-  const int effectsSets = 6;
+  const int effectsSets = 7;
   int currentEffect = 6;
   int dec_pos;
   boolean effectInit=false;
@@ -28,11 +28,12 @@
   int clockTimer = 1000;
   boolean clockSide=true; // рост
   int clockPos = 0;
+  int blinkK0Timer = 1000;
+  boolean blinkK0stat = false;
 
   const int speedSets = 5;
   int cathodeDelay_mks = 1; //задержка на переход заряда с одного катода на другой - вроде не требуется совсем
-  int cathodeDelayInit_mks = 50; // для инициализации
-  int InitDelay_mks = 10000;
+  int InitDelay_mks = 1000000;
   int currentSpeed = 0;
   int speedDelays[speedSets] = {250,500,1000,5000,10000}; //microseconds
   int currentDelay_mks = speedDelays[currentSpeed];
@@ -75,9 +76,25 @@ void loop() {
     case 4:{smileDyn();effectDelay_mks = currentDelay_mks;break;}
     case 5:{metro(6,4);effectDelay_mks = currentDelay_mks;break;}
     case 6:{clock();effectDelay_mks = currentDelay_mks;break;}
+    case 7:{blinkK0();effectDelay_mks = currentDelay_mks;break;}
   }
   delayMicroseconds(effectDelay_mks);
 }
+
+void blinkK0() {
+  if (!effectInit){
+    effectInit=true;
+    stroreMillis = millis();
+    blinkK0stat = true;
+  }
+
+  if (millis()-stroreMillis >= blinkK0Timer){
+    if (blinkK0stat) {digitalWrite(KT0, LOW);}else{digitalWrite(KT0, HIGH);}
+    blinkK0stat=!blinkK0stat;
+    stroreMillis = millis();
+  }
+}
+
 
 void clock() {
   if (!effectInit){
@@ -85,6 +102,8 @@ void clock() {
     effectInit=true;
     clockSide=true;
     stroreMillis = millis();
+    digitalWrite(KT0, HIGH);
+    delayMicroseconds(effectDelay_mks);
   }
 
   for (int pos=1; pos<=clockPos; pos++){
@@ -195,17 +214,8 @@ void smile(int size) {
 
 //при поджиге точки на катоде 1 - точка почемуто зажигается где угодно и ее надо привести в поз.0 (К0)
 void decathroneInit () {
-  digitalWrite(KT0, HIGH);
-  for (int pos = 0; pos <=29; pos++) {
-    byte dec = pos % 3; // Определение текущего пина для подачи импульса
-    // Подача короткого импульса на соответствующий пин управления
-    digitalWrite(KT1, LOW); digitalWrite(KT2, LOW); digitalWrite(KT3, LOW);
-    delayMicroseconds(cathodeDelayInit_mks);
-    if (dec == 0) digitalWrite(KT3, HIGH);
-    if (dec == 1) digitalWrite(KT1, HIGH);
-    if (dec == 2) digitalWrite(KT2, HIGH);
-    delayMicroseconds(InitDelay_mks);
-  }
+  digitalWrite(KT0, HIGH); digitalWrite(KT1, LOW); digitalWrite(KT2, LOW); digitalWrite(KT3, LOW);
+  delayMicroseconds(InitDelay_mks);
 }
 
 void buttonTick () {
@@ -227,10 +237,12 @@ void buttonTick () {
   }
 
   if (btnEffect.isClick()) {
-    currentEffect = (currentEffect + 1) % effectsSets;
+    if (currentEffect==effectsSets){currentEffect=0;}
+    currentEffect++;
     decathroneInit();
     dec_pos = 0;
     effectInit=false;
+    Serial.print("currentEffect=");Serial.println(currentEffect);
   }
 }
 
