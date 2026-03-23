@@ -13,18 +13,21 @@
   GButton btnSpeed(BTN1, HIGH_PULL, NORM_OPEN);
   GButton btnEffect(BTN2, HIGH_PULL, NORM_OPEN);
   GButton btnDimm(BTN3, HIGH_PULL, NORM_OPEN);
-  
-  const int effectsSets = 5;
-  int currentEffect = 4;
+
+  const int effectsSets = 6;
+  int currentEffect = 6;
   int dec_pos;
   boolean effectInit=false;
-  boolean smileSide=false;
+  boolean smileSide=false; // против часовой стрелке
   int smileDynSise = 2;
-  boolean smileDynDir=true;
+  boolean smileDynDir=true; // рост
   int smileDynTimer = 1000;
   unsigned long stroreMillis = millis();
-  boolean smileSideMetro = false;
+  boolean smileSideMetro = false; // против часовой стрелке
   int smileMetroTimer = 1000;
+  int clockTimer = 1000;
+  boolean clockSide=true; // рост
+  int clockPos = 0;
 
   const int speedSets = 5;
   int cathodeDelay_mks = 1; //задержка на переход заряда с одного катода на другой - вроде не требуется совсем
@@ -33,6 +36,7 @@
   int currentSpeed = 0;
   int speedDelays[speedSets] = {250,500,1000,5000,10000}; //microseconds
   int currentDelay_mks = speedDelays[currentSpeed];
+  int effectDelay_mks = currentDelay_mks;
 
   const int dimmSets = 3;
   int currentDimm = 0;
@@ -56,19 +60,47 @@ void setup() {
   setPWM(GEN, currentDuty);
   delay(genWarm);
   decathroneInit();
+  
+  Serial.begin(9600);
+  Serial.println("Code_v.3");
 }
 
 void loop() {
   buttonTick();
 
   switch (currentEffect) {
-    case 1:{setDecatronPos(true);break;}
-    case 2:{setDecatronPos(false);break;}
-    case 3:{smile(2);break;}
-    case 4:{smileDyn();break;}
-    case 5:{metro(6,4);break;}
+    case 1:{setDecatronStep(true);effectDelay_mks = currentDelay_mks;break;}
+    case 2:{setDecatronStep(false);effectDelay_mks = currentDelay_mks;break;}
+    case 3:{smile(2);effectDelay_mks = currentDelay_mks;break;}
+    case 4:{smileDyn();effectDelay_mks = currentDelay_mks;break;}
+    case 5:{metro(6,4);effectDelay_mks = currentDelay_mks;break;}
+    case 6:{clock();effectDelay_mks = currentDelay_mks;break;}
   }
-  delayMicroseconds(currentDelay_mks);
+  delayMicroseconds(effectDelay_mks);
+}
+
+void clock() {
+  if (!effectInit){
+    clockPos = 0;
+    effectInit=true;
+    clockSide=true;
+    stroreMillis = millis();
+  }
+
+  for (int pos=1; pos<=clockPos; pos++){
+    setDecatronStep(clockSide);
+    delayMicroseconds(effectDelay_mks);
+  }
+  for (int pos=1; pos<=clockPos; pos++){
+    setDecatronStep(!clockSide);
+    delayMicroseconds(effectDelay_mks);
+  }
+  if (millis()-stroreMillis >= clockTimer){
+    if (clockSide) {clockPos++;} else {clockPos--;}
+    if ((clockPos == 29) or (clockPos == 0)) {clockSide=!clockSide;}
+    stroreMillis = millis();
+  }
+  
 }
 
 void metro(int size, int delta) {
@@ -76,7 +108,7 @@ void metro(int size, int delta) {
   int halfSize = size/2;
   if (!effectInit){
     for (int pos=0; pos <=14+halfSize;pos++){
-      setDecatronPos(true); 
+      setDecatronStep(true); 
       delayMicroseconds(currentDelay_mks); 
     }
     effectInit=true;
@@ -85,7 +117,7 @@ void metro(int size, int delta) {
     smileSideMetro=false;
   }
   for (int pos=1; pos<=halfSize*2-1; pos++){
-    setDecatronPos(smileSide); 
+    setDecatronStep(smileSide); 
     delayMicroseconds(currentDelay_mks);
   }
 
@@ -97,7 +129,7 @@ void metro(int size, int delta) {
       delta = size+delta;
     }
     for (int pos=1; pos<=delta-1; pos++){
-      setDecatronPos(smileSideMetro);
+      setDecatronStep(smileSideMetro);
       delayMicroseconds(currentDelay_mks);
     }
     stroreMillis = millis();
@@ -111,16 +143,17 @@ void smileDyn() {
 
   if (!effectInit){
     for (int pos=0; pos <=14+smileDynSise/2; pos++){
-      setDecatronPos(true); 
+      setDecatronStep(true); 
       delayMicroseconds(currentDelay_mks); 
     }
     effectInit=true;
     smileSide=false;
+    smileDynSise = 2;
     stroreMillis = millis();
   }
   //качнем
     for (int pos=1; pos<=smileDynSise-1; pos++){
-      setDecatronPos(smileSide); 
+      setDecatronStep(smileSide); 
       delayMicroseconds(currentDelay_mks);
   }
   
@@ -129,11 +162,11 @@ void smileDyn() {
     else if (smileDynSise<=2){smileDynDir=true;}
     if (smileDynDir) {
       smileDynSise=smileDynSise+2;
-      setDecatronPos(smileSide); 
+      setDecatronStep(smileSide); 
     }
     else {
       smileDynSise=smileDynSise-2;
-      setDecatronPos(!smileSide);
+      setDecatronStep(!smileSide);
       }
     stroreMillis = millis();
     delayMicroseconds(currentDelay_mks);
@@ -146,7 +179,7 @@ void smile(int size) {
   int halfSize = size/2;
   if (!effectInit){
     for (int pos=0; pos <=14+halfSize;pos++){
-      setDecatronPos(true); 
+      setDecatronStep(true); 
       delayMicroseconds(currentDelay_mks); 
     }
     effectInit=true;
@@ -154,7 +187,7 @@ void smile(int size) {
   }
   //качнем
     for (int pos=1; pos<=halfSize*2-1; pos++){
-      setDecatronPos(smileSide); 
+      setDecatronStep(smileSide); 
       delayMicroseconds(currentDelay_mks);
   }
   smileSide=!smileSide;
@@ -202,7 +235,7 @@ void buttonTick () {
 }
 
 // Установка позиции декатрона на один шаг
-void setDecatronPos(boolean step) {
+void setDecatronStep(boolean step) {
   if (step) { // Шаг вперед
     dec_pos++;
     if (dec_pos >= 30) dec_pos = 0; // Сброс позиции после полного круга (30 шагов)
