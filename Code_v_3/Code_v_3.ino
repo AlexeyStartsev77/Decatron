@@ -28,6 +28,7 @@
   int clockTimer = 1000;
   boolean clockSide=true; // рост
   int clockPos = 0;
+  int clockZerroPos = 0;
   int blinkK0Timer = 1000;
   boolean blinkK0stat = false;
 
@@ -86,6 +87,8 @@ void blinkK0() {
     effectInit=true;
     stroreMillis = millis();
     blinkK0stat = true;
+    digitalWrite(KT0, HIGH);
+    delayMicroseconds(InitDelay_mks);
   }
 
   if (millis()-stroreMillis >= blinkK0Timer){
@@ -101,30 +104,48 @@ void clock() {
     clockPos = 0;
     effectInit=true;
     clockSide=true;
+    clockZerroPos=0;
     stroreMillis = millis();
     digitalWrite(KT0, HIGH);
-    delayMicroseconds(effectDelay_mks);
+    delayMicroseconds(InitDelay_mks);
   }
 
-  for (int pos=1; pos<=clockPos; pos++){
-    setDecatronStep(clockSide);
-    delayMicroseconds(effectDelay_mks);
+  if (clockZerroPos == 1) { // мы в нуле и держим катод
+      digitalWrite(KT0, LOW);
+      delayMicroseconds(effectDelay_mks);
   }
-  for (int pos=1; pos<=clockPos; pos++){
-    setDecatronStep(!clockSide);
-    delayMicroseconds(effectDelay_mks);
+  else if (clockZerroPos == 2) { // мы в нуле и гасим катод
+      digitalWrite(KT0, HIGH); // второй заход
+      delayMicroseconds(effectDelay_mks);
+    }
+  else {
+    for (int pos=1; pos<=clockPos; pos++){
+      setDecatronStep(clockSide);
+      delayMicroseconds(effectDelay_mks);
+    }
+    for (int pos=1; pos<=clockPos; pos++){
+      setDecatronStep(!clockSide);
+      delayMicroseconds(effectDelay_mks);
+    }
   }
+
   if (millis()-stroreMillis >= clockTimer){
-    if (clockSide) {clockPos++;} else {clockPos--;}
-    if ((clockPos == 29) or (clockPos == 0)) {clockSide=!clockSide;}
+    if ((!clockSide) and (clockPos == 0)) {clockZerroPos++;} // если идем на убыль и достигаем ноля 
+    if (clockZerroPos == 3) {clockSide=!clockSide; clockZerroPos=0;}
+    if (clockZerroPos == 0) {
+      if (clockSide) {clockPos++;} else {clockPos--;}
+      if (clockPos == 29) {clockSide=!clockSide;}
+    }
     stroreMillis = millis();
   }
   
 }
 
-void metro(int size, int delta) {
+void metro(int size, int delta) {  // пока не готов
   //идем по часовой стрелке до центрального нижнего и еще на целую половину size
   int halfSize = size/2;
+  digitalWrite(KT0, HIGH);
+  delayMicroseconds(InitDelay_mks);
   if (!effectInit){
     for (int pos=0; pos <=14+halfSize;pos++){
       setDecatronStep(true); 
@@ -158,9 +179,9 @@ void metro(int size, int delta) {
 }
 
 void smileDyn() {
-  //идем по часовой стрелке до центрального нижнего и еще на целую половину size
-
   if (!effectInit){
+    digitalWrite(KT0, HIGH);
+    delayMicroseconds(InitDelay_mks);
     for (int pos=0; pos <=14+smileDynSise/2; pos++){
       setDecatronStep(true); 
       delayMicroseconds(currentDelay_mks); 
@@ -170,7 +191,6 @@ void smileDyn() {
     smileDynSise = 2;
     stroreMillis = millis();
   }
-  //качнем
     for (int pos=1; pos<=smileDynSise-1; pos++){
       setDecatronStep(smileSide); 
       delayMicroseconds(currentDelay_mks);
@@ -194,8 +214,9 @@ void smileDyn() {
 }
 
 void smile(int size) {
-  //идем по часовой стрелке до центрального нижнего и еще на целую половину size
   int halfSize = size/2;
+  digitalWrite(KT0, HIGH);
+  delayMicroseconds(InitDelay_mks);
   if (!effectInit){
     for (int pos=0; pos <=14+halfSize;pos++){
       setDecatronStep(true); 
@@ -204,7 +225,6 @@ void smile(int size) {
     effectInit=true;
     smileSide=false;
   }
-  //качнем
     for (int pos=1; pos<=halfSize*2-1; pos++){
       setDecatronStep(smileSide); 
       delayMicroseconds(currentDelay_mks);
@@ -212,9 +232,8 @@ void smile(int size) {
   smileSide=!smileSide;
 }
 
-//при поджиге точки на катоде 1 - точка почемуто зажигается где угодно и ее надо привести в поз.0 (К0)
 void decathroneInit () {
-  digitalWrite(KT0, HIGH); digitalWrite(KT1, LOW); digitalWrite(KT2, LOW); digitalWrite(KT3, LOW);
+  digitalWrite(KT0, LOW); digitalWrite(KT1, LOW); digitalWrite(KT2, LOW); digitalWrite(KT3, LOW);
   delayMicroseconds(InitDelay_mks);
 }
 
